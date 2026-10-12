@@ -12,25 +12,11 @@ class StoreStockMovementRequest extends FormRequest
         return true;
     }
 
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'tenant_id' => $this->header('X-Tenant-ID'),
-        ]);
-    }
-
     public function rules(): array
     {
-        $tenantId = $this->input('tenant_id');
+        $tenantId = $this->attributes->get('tenant')?->id;
 
         return [
-            'tenant_id' => [
-                'required',
-                'integer',
-                Rule::exists('tenants', 'id'),
-            ],
-
             'product_id' => [
                 'required',
                 'integer',

@@ -42,8 +42,11 @@ class StockMovementTest extends TestCase
 
     public function test_stock_can_be_received(): void
     {
+        dump($this->tenant->fresh()->subdomain);
+        dump($this->tenant->subdomain);
+
         $response = $this
-            ->withHeader('X-Tenant-ID', (string) $this->tenant->id)
+            ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
                 'product_id' => $this->product->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -71,7 +74,7 @@ class StockMovementTest extends TestCase
     public function test_stock_cannot_be_removed_below_zero(): void
     {
         $response = $this
-            ->withHeader('X-Tenant-ID', (string) $this->tenant->id)
+            ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
                 'product_id' => $this->product->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -101,7 +104,7 @@ class StockMovementTest extends TestCase
         ]);
 
         $response = $this
-            ->withHeader('X-Tenant-ID', (string) $this->tenant->id)
+            ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
                 'product_id' => $this->product->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -135,7 +138,7 @@ class StockMovementTest extends TestCase
         ]);
 
         $response = $this
-            ->withHeader('X-Tenant-ID', (string) $this->tenant->id)
+            ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
                 'product_id' => $this->product->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -188,7 +191,7 @@ class StockMovementTest extends TestCase
         ]);
 
         $response = $this
-            ->withHeader('X-Tenant-ID', (string) $this->tenant->id)
+            ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
                 'product_id' => $this->product->id,
                 'warehouse_id' => $this->warehouse->id,

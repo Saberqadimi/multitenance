@@ -15,7 +15,7 @@ class StockMovementController extends Controller
     public function __invoke(
         StoreStockMovementRequest $request
     ): JsonResponse {
-        $tenantId = (int) $request->header('X-Tenant-ID');
+        $tenantId = (int) $request->attributes->get('tenant')->id;
         $data = $request->validated();
 
         $movement = DB::transaction(function () use (
