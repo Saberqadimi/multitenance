@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockMovement extends Model
 {
@@ -16,17 +17,17 @@ class StockMovement extends Model
         'meta',
     ];
 
-    public function tenant()
+    public function tenant() : BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function products()
+    public function products() : BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function warehouse()
+    public function warehouse() : BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
