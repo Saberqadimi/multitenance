@@ -42,9 +42,6 @@ class StockMovementTest extends TestCase
 
     public function test_stock_can_be_received(): void
     {
-        dump($this->tenant->fresh()->subdomain);
-        dump($this->tenant->subdomain);
-
         $response = $this
             ->withHeader('X-Tenant', (string) $this->tenant->subdomain)
             ->postJson('/api/stock-movements', [
