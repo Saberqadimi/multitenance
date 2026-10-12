@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('sku');
             $table->string('name');
-            $table->string('unit_price');
+            $table->bigInteger('unit_price');
             $table->timestamps();
 
             $table->unique(['tenant_id', 'sku']);
