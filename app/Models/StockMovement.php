@@ -17,6 +17,10 @@ class StockMovement extends Model
         'meta',
     ];
 
+    protected $casts = [
+        'meta' => 'array',
+    ];
+
     public function tenant() : BelongsTo
     {
         return $this->belongsTo(Tenant::class);
