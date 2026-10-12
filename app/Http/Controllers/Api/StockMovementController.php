@@ -12,9 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class StockMovementController extends Controller
 {
-    public function __invoke(StoreStockMovementRequest $request): JsonResponse {
+    public function __invoke(
+        StoreStockMovementRequest $request
+    ): JsonResponse {
         $tenantId = (int) $request->header('X-Tenant-ID');
-
         $data = $request->validated();
 
         $movement = DB::transaction(function () use (
@@ -25,26 +26,11 @@ class StockMovementController extends Controller
                 return $this->transferStock($data, $tenantId);
             }
 
-            $level = StockLevel::query()
-                ->where('tenant_id', $tenantId)
-                ->where('product_id', $data['product_id'])
-                ->where('warehouse_id', $data['warehouse_id'])
-                ->lockForUpdate()
-                ->first();
-
-            if (! $level) {
-                $level = StockLevel::create([
-                    'tenant_id' => $tenantId,
-                    'product_id' => $data['product_id'],
-                    'warehouse_id' => $data['warehouse_id'],
-                    'quantity' => 0,
-                ]);
-
-                $level = StockLevel::query()
-                    ->whereKey($level->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-            }
+            $level = $this->lockStockLevel(
+                $tenantId,
+                (int) $data['product_id'],
+                (int) $data['warehouse_id']
+            );
 
             $quantity = (int) $data['quantity'];
 
@@ -59,9 +45,11 @@ class StockMovementController extends Controller
                 ]);
             }
 
-            $level->quantity += $data['type'] === 'in'
-                ? $quantity
-                : -$quantity;
+            if ($data['type'] === 'in') {
+                $level->quantity += $quantity;
+            } else {
+                $level->quantity -= $quantity;
+            }
 
             $level->save();
 
@@ -73,7 +61,7 @@ class StockMovementController extends Controller
                 'quantity' => $quantity,
                 'reference' => $data['reference'] ?? null,
             ]);
-        });
+        }, 3);
 
         return response()->json([
             'message' => 'گردش موجودی با موفقیت ثبت شد.',
@@ -86,40 +74,31 @@ class StockMovementController extends Controller
         int $tenantId
     ): StockMovement {
         $quantity = (int) $data['quantity'];
+
         $fromWarehouseId = (int) $data['meta']['from_warehouse_id'];
         $toWarehouseId = (int) $data['meta']['to_warehouse_id'];
 
-        $warehouseIds = [$fromWarehouseId, $toWarehouseId];
+        $warehouseIds = [
+            $fromWarehouseId,
+            $toWarehouseId,
+        ];
+
         sort($warehouseIds);
 
         $levels = [];
 
         foreach ($warehouseIds as $warehouseId) {
-            $level = StockLevel::query()
-                ->where('tenant_id', $tenantId)
-                ->where('product_id', $data['product_id'])
-                ->where('warehouse_id', $warehouseId)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $level) {
-                $level = StockLevel::create([
-                    'tenant_id' => $tenantId,
-                    'product_id' => $data['product_id'],
-                    'warehouse_id' => $warehouseId,
-                    'quantity' => 0,
-                ]);
-
-                $level = StockLevel::query()
-                    ->whereKey($level->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-            }
-
-            $levels[$warehouseId] = $level;
+            $levels[$warehouseId] = $this->lockStockLevel(
+                $tenantId,
+                (int) $data['product_id'],
+                $warehouseId
+            );
         }
 
-        if ($levels[$fromWarehouseId]->quantity < $quantity) {
+        $source = $levels[$fromWarehouseId];
+        $destination = $levels[$toWarehouseId];
+
+        if ($source->quantity < $quantity) {
             throw ValidationException::withMessages([
                 'quantity' => [
                     'موجودی انبار مبدأ برای انتقال کافی نیست.',
@@ -127,11 +106,11 @@ class StockMovementController extends Controller
             ]);
         }
 
-        $levels[$fromWarehouseId]->quantity -= $quantity;
-        $levels[$fromWarehouseId]->save();
+        $source->quantity -= $quantity;
+        $destination->quantity += $quantity;
 
-        $levels[$toWarehouseId]->quantity += $quantity;
-        $levels[$toWarehouseId]->save();
+        $source->save();
+        $destination->save();
 
         return StockMovement::create([
             'tenant_id' => $tenantId,
@@ -145,5 +124,28 @@ class StockMovementController extends Controller
                 'to_warehouse_id' => $toWarehouseId,
             ],
         ]);
+    }
+
+    private function lockStockLevel(
+        int $tenantId,
+        int $productId,
+        int $warehouseId
+    ): StockLevel {
+        $now = now();
+        StockLevel::query()->insertOrIgnore([
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'warehouse_id' => $warehouseId,
+            'quantity' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return StockLevel::query()
+            ->where('tenant_id', $tenantId)
+            ->where('product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 }
