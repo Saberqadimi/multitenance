@@ -11,4 +11,19 @@ class Warehouse extends Model
         'name',
         'location',
     ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function stockLEvels()
+    {
+        return $this->hasMany(StockLevel::class);
+    }
 }
