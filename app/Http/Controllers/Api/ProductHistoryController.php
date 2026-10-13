@@ -3,21 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
+use App\Http\Resources\ProductHistoryResource;
+use App\Services\ProductHistoryService;
 use Illuminate\Http\Request;
 
 class ProductHistoryController extends Controller
 {
-    public function __invoke(Request $request, string $sku)
+    public function __construct(
+        private readonly ProductHistoryService $service,
+    ) {}
+
+    public function __invoke(Request $request, string $sku) : \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
-        $product = Product::query()->where('sku', $sku)->firstOrFail();
-
-        $history = $product->stockMovements()
-            ->with(['warehouse'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate($request->input('per_page', 15));
-
-        return response()->json($history);
+        return $this->service->getHistoryForSku($sku, $request);
     }
 }

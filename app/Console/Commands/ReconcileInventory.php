@@ -32,7 +32,6 @@ class ReconcileInventory extends Command
         $actual = $this->actualLevels($tenant->id);
 
         // مقایسه و گزارش مغایرت‌ها
-
         $discrepancies = $this->reportDiscrepancies(
             $tenant,
             $expected,
