@@ -218,4 +218,72 @@ class StockMovementTest extends TestCase
 
         $this->assertDatabaseCount('stock_movements', 0);
     }
+
+
+    public function test_tenant_cannot_create_stock_movement_for_another_tenants_product(): void
+    {
+        $anotherTenant = Tenant::create([
+            'name' => 'آرکاسل',
+            'subdomain' => 'arkacell',
+        ]);
+
+        $anotherProduct = Product::create([
+            'tenant_id' => $anotherTenant->id,
+            'sku' => 'ARKACELL-001',
+            'name' => 'accessPoint 2026 WIFI20',
+            'unit_price' => 200,
+        ]);
+
+        $response = $this
+            ->withHeader('X-Tenant', 'torob')
+            ->postJson('/api/stock-movements', [
+                'product_id' => $anotherProduct->id,
+                'warehouse_id' => $this->warehouse->id,
+                'type' => 'in',
+                'quantity' => 10,
+            ]);
+
+        $response->assertUnprocessable();
+
+        $this->assertDatabaseCount('stock_movements', 0);
+
+        $this->assertDatabaseMissing('stock_levels', [
+            'tenant_id' => $this->tenant->id,
+            'product_id' => $anotherProduct->id,
+        ]);
+    }
+
+
+    public function test_tenant_cannot_create_stock_movement_for_another_tenants_warehouse(): void
+    {
+        $anotherTenant = Tenant::create([
+            'name' => 'شرکت دیگر',
+            'subdomain' => 'another-company',
+        ]);
+
+        $anotherWarehouse = Warehouse::create([
+            'tenant_id' => $anotherTenant->id,
+            'name' => 'انبار شرکت دیگر',
+            'location' => 'تهران',
+        ]);
+
+        $response = $this
+            ->withHeader('X-Tenant', 'torob')
+            ->postJson('/api/stock-movements', [
+                'product_id' => $this->product->id,
+                'warehouse_id' => $anotherWarehouse->id,
+                'type' => 'in',
+                'quantity' => 10,
+            ]);
+
+        $response->assertUnprocessable();
+
+        $this->assertDatabaseCount('stock_movements', 0);
+
+        $this->assertDatabaseMissing('stock_levels', [
+            'tenant_id' => $this->tenant->id,
+            'product_id' => $this->product->id,
+            'warehouse_id' => $anotherWarehouse->id,
+        ]);
+    }
 }
