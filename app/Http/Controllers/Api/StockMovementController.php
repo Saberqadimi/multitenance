@@ -131,14 +131,24 @@ class StockMovementController extends Controller
         int $productId,
         int $warehouseId
     ): StockLevel {
-        $now = now();
+        $existing = StockLevel::query()
+            ->where('tenant_id', $tenantId)
+            ->where('product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
         StockLevel::query()->insertOrIgnore([
             'tenant_id' => $tenantId,
             'product_id' => $productId,
             'warehouse_id' => $warehouseId,
             'quantity' => 0,
-            'created_at' => $now,
-            'updated_at' => $now,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return StockLevel::query()
